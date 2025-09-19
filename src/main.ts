@@ -73,7 +73,7 @@ async function bootstrap() {
 
   // Khởi động server HTTP trên port được chỉ định
   // Lấy PORT từ biến môi trường (.env), nếu không có thì dùng port 3000 làm mặc định
-  await app.listen(process.env.PORT || 3000);
+  await app.listen(process.env.PORT || 3001);
 }
 
 // Gọi hàm bootstrap để khởi động ứng dụng NestJS
