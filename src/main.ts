@@ -23,6 +23,31 @@ async function bootstrap() {
     logger: new CustomLogger(),
   });
 
+  // Cấu hình CORS để cho phép frontend gọi API từ domain khác
+  // Cho phép tất cả các origin từ localhost với bất kỳ port nào
+  app.enableCors({
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Cho phép tất cả các request từ localhost với bất kỳ port nào
+      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
+        callback(null, true);
+      } else {
+        // Nếu có FE_URL được cấu hình, kiểm tra thêm các origin đó
+        const allowedOrigins = process.env.FE_URL 
+          ? process.env.FE_URL.split(',').map(url => url.trim())
+          : [];
+        
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
+    },
+    credentials: true, // true nếu frontend dùng cookie
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
+
   // Cấu hình global exception filter để xử lý tất cả các exception
   app.useGlobalFilters(new HttpExceptionFilter());
 
