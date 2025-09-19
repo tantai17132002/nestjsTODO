@@ -20,7 +20,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-    command: sh -c "npm install && npx ts-node --require tsconfig-paths/register scripts/create-admin.ts"
+    command: sh -c "npm install && npm run seed:admin"
     depends_on:
       - postgres
     environment:

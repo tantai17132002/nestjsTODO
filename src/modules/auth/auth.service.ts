@@ -275,7 +275,7 @@ export class AuthService {
       };
     } catch (error) {
       // Bước 4: Error handling và logging
-      this.logger.error(`Registration failed for user: ${createUserDto.username}`, error.stack);
+      this.logger.error(`Registration failed for user: ${createUserDto.username}`, (error as Error).stack);
       // Re-throw error để ExceptionFilter handle và trả về HTTP response phù hợp
       throw error;
     }

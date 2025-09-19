@@ -140,7 +140,7 @@ export class UserService {
    *
    * Luồng bảo mật:
    * 1. Xác thực dữ liệu đầu vào (xác thực DTO)
-   * 2. Kiểm tra tính duy nhất của tên người dùng
+   * 2. Kiểm tra tính duy nhất của tên người dùng và email
    * 3. Băm mật khẩu với bcrypt
    * 4. Tạo thực thể người dùng
    * 5. Lưu vào cơ sở dữ liệu
@@ -148,18 +148,18 @@ export class UserService {
    *
    * Tính năng bảo mật:
    * - Băm mật khẩu với số vòng salt = 10
-   * - Xác thực tính duy nhất của tên người dùng
+   * - Xác thực tính duy nhất của tên người dùng và email
    * - Khử trùng đầu vào
    * - Phản hồi bảo mật (không có mật khẩu)
    *
    * Xử lý lỗi:
-   * - ConflictException: Tên người dùng đã tồn tại
+   * - ConflictException: Tên người dùng hoặc email đã tồn tại
    * - Lỗi xác thực: Dữ liệu đầu vào không hợp lệ
    * - Lỗi cơ sở dữ liệu: Sự cố kết nối/ràng buộc
    *
    * Ghi nhật ký:
    * - Gỡ lỗi: Bắt đầu tạo người dùng
-   * - Cảnh báo: Xung đột tên người dùng
+   * - Cảnh báo: Xung đột tên người dùng hoặc email
    * - Nhật ký: Tạo thành công
    * - Lỗi: Lỗi trong quá trình tạo
    *
@@ -189,6 +189,14 @@ export class UserService {
       if (existingUser) {
         this.logger.warn(`Username already exists: ${username}`);
         throw new ConflictException('Username already exists');
+      }
+
+      // Kiểm tra email đã tồn tại chưa
+      // Quy tắc nghiệp vụ: Email phải duy nhất
+      const existingEmail = await this.findByEmail(email);
+      if (existingEmail) {
+        this.logger.warn(`Email already exists: ${email}`);
+        throw new ConflictException('Email already exists');
       }
 
       // Băm mật khẩu với bcrypt
@@ -223,7 +231,7 @@ export class UserService {
       }
 
       // Ghi nhật ký lỗi chi tiết cho gỡ lỗi
-      this.logger.error(`Failed to create user: ${error.message}`, error.stack);
+      this.logger.error(`Failed to create user: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi và trả về phản hồi HTTP phù hợp
       throw error;
     }
@@ -269,7 +277,7 @@ export class UserService {
       return user;
     } catch (error) {
       // Ghi nhật ký lỗi truy vấn cơ sở dữ liệu
-      this.logger.error(`Failed to find user by username: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find user by username: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     }
@@ -310,7 +318,7 @@ export class UserService {
       return user;
     } catch (error) {
       // Ghi nhật ký lỗi truy vấn cơ sở dữ liệu
-      this.logger.error(`Failed to find user by email: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find user by email: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     }
@@ -357,7 +365,7 @@ export class UserService {
       return user;
     } catch (error) {
       // Ghi nhật ký lỗi truy vấn cơ sở dữ liệu
-      this.logger.error(`Failed to find user by username or email: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find user by username or email: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     }
@@ -440,7 +448,7 @@ export class UserService {
       };
     } catch (error) {
       // Ghi nhật ký lỗi truy vấn
-      this.logger.error(`Failed to retrieve users: ${error.message}`, error.stack);
+      this.logger.error(`Failed to retrieve users: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     }
@@ -513,7 +521,7 @@ export class UserService {
         throw error;
       }
       // Ghi nhật ký lỗi truy vấn cơ sở dữ liệu
-      this.logger.error(`Failed to find user by ID: ${error.message}`, error.stack);
+      this.logger.error(`Failed to find user by ID: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     }
@@ -619,7 +627,7 @@ export class UserService {
         throw error;
       }
       // Ghi nhật ký lỗi giao dịch
-      this.logger.error(`Failed to update role: ${error.message}`, error.stack);
+      this.logger.error(`Failed to update role: ${(error as Error).message}`, (error as Error).stack);
       // ExceptionFilter sẽ tự động xử lý lỗi
       throw error;
     } finally {
