@@ -24,15 +24,17 @@ export class FiltersMetaDto {
     description: 'Filter from date',
     example: '2024-01-01T00:00:00.000Z',
     required: false,
+    nullable: true,
   })
-  dateFrom?: string;
+  dateFrom?: string | null;
 
   @ApiProperty({
     description: 'Filter to date',
     example: '2024-12-31T23:59:59.999Z',
     required: false,
+    nullable: true,
   })
-  dateTo?: string;
+  dateTo?: string | null;
 
   @ApiProperty({
     description: 'Sort by field',

@@ -1,20 +1,17 @@
 // Import các decorator và module cần thiết từ NestJS
-import { Body, Controller, Post, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Get, UseGuards, HttpCode } from '@nestjs/common';
 import { CreateUsersDto } from '@/modules/users/dto/create-users.dto';
-import { UserService } from '@/modules/users/users.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
-
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { RegisterResponseDto, LoginResponseDto } from '@/modules/auth/dto/auth-response.dto';
-import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
+import { CurrentUserResponseDto } from '@/modules/auth/dto/current-user-response.dto';
 import {
   ErrorResponseDto,
   ValidationErrorResponseDto,
   UnauthorizedErrorResponseDto,
-  ForbiddenErrorResponseDto,
 } from '@/common/dto/error-response.dto';
 import type { JwtUser } from '@/common/types';
 
@@ -43,11 +40,7 @@ import type { JwtUser } from '@/common/types';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly authService: AuthService,
-    // CustomLogger không cần thiết trong Controller vì logging được xử lý trong Service
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * Endpoint đăng ký user mới
@@ -158,6 +151,7 @@ export class AuthController {
     type: UnauthorizedErrorResponseDto,
   })
   @Post('login')
+  @HttpCode(200)
   async login(@Body() dto: LoginDto) {
     // Controller chỉ routing và gọi service
     // Logging và business logic được xử lý trong AuthService
@@ -189,11 +183,11 @@ export class AuthController {
    * }
    */
   @ApiOperation({ summary: 'Get current user information' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({
     status: 200,
-    description: 'Current user information',
-    type: UserResponseDto,
+    description: 'Current user information from the authenticated session',
+    type: CurrentUserResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -202,9 +196,11 @@ export class AuthController {
   })
   @UseGuards(JwtAuthGuard) // Bảo vệ endpoint bằng JWT authentication
   @Get('me')
-  getMe(@CurrentUser() user: JwtUser) {
-    // Controller chỉ trả về thông tin user từ JWT token
-    // Không cần logging vì đây là simple data retrieval
-    return user;
+  getMe(@CurrentUser() user: JwtUser): CurrentUserResponseDto {
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
   }
 }

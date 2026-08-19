@@ -6,31 +6,35 @@ services:
     ports:
       - 5434:5432
     environment:
-      # POSTGRES_USER: projectcb_user
-      # POSTGRES_PASSWORD: projectcb_password
-      # POSTGRES_DB: projectcb_db
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   seed-admin:
-    image: node:20-alpine  
+    image: node:20-alpine
     working_dir: /app
     volumes:
       - ./:/app
     command: sh -c "npm install && npm run seed:admin"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOSTAD}
-      DB_PORT: ${DB_PORTAD}
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
       DB_NAME: ${DB_NAME}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
 volumes:
   pgdata:

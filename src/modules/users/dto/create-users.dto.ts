@@ -1,58 +1,38 @@
-import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { normalizeEmail } from '@/common/utils/normalize';
 
 /**
- * CreateUsersDto - Data Transfer Object cho việc tạo user mới
- *
- * DTO này định nghĩa cấu trúc dữ liệu và validation rules
- * khi client gửi request tạo user mới
- *
- * @example
- * // Request body khi tạo user
- * {
- *   "username": "john_doe",
- *   "email": "john@example.com",
- *   "password": "password123"
- * }
+ * DTO đăng ký user. Client không được gửi role; user mới luôn là `user`.
  */
 export class CreateUsersDto {
-  /**
-   * Tên đăng nhập của user
-   * @IsNotEmpty() = không được để trống
-   * Validation: Bắt buộc phải có giá trị
-   */
   @ApiProperty({
-    description: 'Username of the user',
+    description: 'Tên đăng nhập, bắt buộc và không được chỉ gồm khoảng trắng',
     example: 'john_doe',
     required: true,
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
   @IsNotEmpty()
   username: string;
 
-  /**
-   * Email của user
-   * @IsEmail() = phải đúng định dạng email
-   * Validation: Kiểm tra format email hợp lệ (có @, domain, etc.)
-   */
   @ApiProperty({
-    description: 'Email of the user',
+    description: 'Email; được chuẩn hóa lowercase trước khi lưu',
     example: 'john@example.com',
     required: true,
   })
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
   @IsEmail()
   email: string;
 
-  /**
-   * Mật khẩu của user
-   * @MinLength(8) = độ dài tối thiểu 8 ký tự
-   * Validation: Đảm bảo mật khẩu đủ mạnh
-   */
   @ApiProperty({
-    description: 'Password of the user (minimum 8 characters)',
+    description: 'Mật khẩu, tối thiểu 8 ký tự',
     example: 'password123',
     required: true,
     minLength: 8,
   })
+  @IsString()
   @MinLength(8)
   password: string;
 }

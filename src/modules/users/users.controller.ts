@@ -23,10 +23,9 @@ import {
 } from '@nestjs/swagger';
 import { UpdateRoleDto } from '@/modules/users/dto/update-role.dto';
 import { QueryUserDto } from '@/modules/users/dto/query-user.dto';
-import { UserResponseDto, UserListResponseDto } from '@/modules/users/dto/user-response.dto';
+import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 import { UserPaginationResponseDto } from '@/modules/users/dto/user-pagination-response.dto';
 import {
-  ErrorResponseDto,
   ValidationErrorResponseDto,
   UnauthorizedErrorResponseDto,
   ForbiddenErrorResponseDto,
@@ -59,9 +58,9 @@ import {
  * @description
  * Tuân thủ nguyên tắc: Controller chỉ routing + I/O, Service xử lý business logic
  */
-@ApiTags('users') // Nhóm các API user trong Swagger docs
-@ApiBearerAuth() // Thêm Bearer token vào Swagger docs
-@Controller('users') // Base route: /users
+@ApiTags('Users')
+@ApiBearerAuth('JWT-auth')
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from '@/common/guards/roles.guard';
-import { ROLES_KEY, UserRole, ADMIN_ROLE, USER_ROLE } from '@/common/constants/roles.constant';
+import { ROLES_KEY, ADMIN_ROLE, USER_ROLE } from '@/common/constants/roles.constant';
 import { JwtUser } from '@/common/types/jwt-user.type';
 
 /**

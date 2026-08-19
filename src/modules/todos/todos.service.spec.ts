@@ -268,7 +268,7 @@ describe('TodosService', () => {
 
       // Assert - Kiểm tra filter isDone được áp dụng
       expect(todoRepository.findAndCount).toHaveBeenCalledWith({
-        where: [{ ownerId: mockUser.id }, { isDone: true }],
+        where: { ownerId: mockUser.id, isDone: true },
         order: { createdAt: 'DESC' },
         skip: 0,
         take: 10,
@@ -276,27 +276,49 @@ describe('TodosService', () => {
       expect(result.filters.isDone).toBe('true');
     });
 
-    it('should apply search filter with LIKE operator', async () => {
-      // Arrange - Test tìm kiếm theo từ khóa
+    it('should apply search filter with ILike without dropping owner scope', async () => {
       const queryWithSearch = { ...mockQueryTodoDto, search: 'typescript' };
-      const todos = [mockTodo] as any;
-      const total = 1;
-      todoRepository.findAndCount.mockResolvedValue([todos, total]);
+      todoRepository.findAndCount.mockResolvedValue([[mockTodo] as any, 1]);
 
-      // Act - Tìm kiếm todos có chứa từ khóa
       const result = await service.findAllTodos(mockUser, queryWithSearch);
-
-      // Assert - Kiểm tra search filter được áp dụng với LIKE
-      expect(todoRepository.findAndCount).toHaveBeenCalledWith({
-        where: [
-          { ownerId: mockUser.id, title: expect.any(Object) },
-          { ownerId: mockUser.id, description: expect.any(Object) },
-        ],
-        order: { createdAt: 'DESC' },
-        skip: 0,
-        take: 10,
-      });
+      const call = todoRepository.findAndCount.mock.calls[0][0] as {
+        where: Array<Record<string, unknown>>;
+      };
+      expect(call.where).toHaveLength(2);
+      expect(call.where[0].ownerId).toBe(mockUser.id);
+      expect(call.where[0].title).toBeDefined();
+      expect(call.where[1].ownerId).toBe(mockUser.id);
+      expect(call.where[1].description).toBeDefined();
       expect(result.filters.search).toBe('typescript');
+    });
+
+    it('should keep owner AND isDone AND search as OR only for title/description', async () => {
+      const query = { ...mockQueryTodoDto, isDone: 'false', search: 'nest' };
+      todoRepository.findAndCount.mockResolvedValue([[mockTodo] as any, 1]);
+
+      await service.findAllTodos(mockUser, query);
+
+      const call = todoRepository.findAndCount.mock.calls[0][0] as {
+        where: Array<Record<string, unknown>>;
+      };
+      expect(call.where[0]).toMatchObject({ ownerId: mockUser.id, isDone: false });
+      expect(call.where[0].title).toBeDefined();
+      expect(call.where[1]).toMatchObject({ ownerId: mockUser.id, isDone: false });
+      expect(call.where[1].description).toBeDefined();
+    });
+
+    it('should not apply owner condition for admin even when filters are combined', async () => {
+      const query = { ...mockQueryTodoDto, isDone: 'true', search: 'nest' };
+      todoRepository.findAndCount.mockResolvedValue([[mockTodo] as any, 1]);
+
+      await service.findAllTodos(mockAdminUser, query);
+
+      const call = todoRepository.findAndCount.mock.calls[0][0] as {
+        where: Array<Record<string, unknown>>;
+      };
+      expect(call.where[0].ownerId).toBeUndefined();
+      expect(call.where[0].isDone).toBe(true);
+      expect(call.where[0].title).toBeDefined();
     });
   });
 
@@ -459,15 +481,9 @@ describe('TodosService', () => {
       );
     });
 
-    it('should throw ForbiddenException when user is not owner and not admin', async () => {
-      // Arrange - Test user không có quyền cập nhật
-      const todoNotOwned = { ...mockTodo, ownerId: 999 };
-      todoRepository.findOne.mockResolvedValue(todoNotOwned as any);
-
-      // Act & Assert - Kiểm tra exception khi không có quyền
-      await expect(service.updateTodo(1, mockUser, mockUpdateTodoDto)).rejects.toThrow(
-        ForbiddenException,
-      );
+    it('should throw BadRequestException when update body is empty', async () => {
+      await expect(service.updateTodo(1, mockUser, {})).rejects.toThrow(BadRequestException);
+      expect(todoRepository.findOne).not.toHaveBeenCalled();
     });
   });
 

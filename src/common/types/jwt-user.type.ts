@@ -13,8 +13,8 @@ export interface JwtUser {
   /** Vai trò của user trong hệ thống */
   role: UserRole;
 
-  /** Tên đăng nhập (có thể không có trong một số trường hợp) */
-  username?: string;
+  /** Tên đăng nhập */
+  username: string;
 
   /** Email của user (có thể không có trong một số trường hợp) */
   email?: string;

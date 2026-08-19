@@ -33,8 +33,11 @@ import { CustomLogger } from '@/common/logger/custom-logger.service';
       imports: [ConfigModule], // Import ConfigModule để sử dụng ConfigService
       inject: [ConfigService], // Inject ConfigService vào factory function
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET'), // Secret key để sign JWT token
-        signOptions: { expiresIn: '1d' }, // Token hết hạn sau 1 ngày
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: (config.get<string>('JWT_EXPIRES_IN') ||
+            '1d') as `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`,
+        },
       }),
     }),
   ],

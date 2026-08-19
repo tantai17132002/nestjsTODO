@@ -1,4 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { BaseQueryDto } from '@/common/dto/pagination.dto';
 
 /**

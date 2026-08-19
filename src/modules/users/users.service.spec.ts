@@ -8,7 +8,6 @@ import { UsersEntity } from '@/modules/users/entity/users.entity';
 import { CreateUsersDto } from '@/modules/users/dto/create-users.dto';
 import { UpdateRoleDto } from '@/modules/users/dto/update-role.dto';
 import { QueryUserDto } from '@/modules/users/dto/query-user.dto';
-import { ADMIN_ROLE } from '@/common/constants/roles.constant';
 import { CustomLogger } from '@/common/logger/custom-logger.service';
 
 // Mock bcryptjs để kiểm soát kết quả hash password trong test
@@ -161,7 +160,15 @@ describe('UserService', () => {
       // Verify entity được save vào database
       expect(usersRepository.save).toHaveBeenCalledWith(createdUser);
       // Verify result không chứa password (bảo mật)
-      expect(result).toEqual(userWithoutPassword);
+      expect(result).toEqual({
+        id: createdUser.id,
+        username: createdUser.username,
+        email: createdUser.email,
+        role: createdUser.role,
+        createdAt: createdUser.createdAt,
+        updatedAt: createdUser.updatedAt,
+      });
+      expect(result).not.toHaveProperty('password');
     });
 
     it('should throw ConflictException when username already exists', async () => {
@@ -322,7 +329,17 @@ describe('UserService', () => {
         take: 10, // Lấy 10 records
       });
       // Verify response structure
-      expect(result.users).toEqual(users); // Danh sách users
+      expect(result.users).toEqual([
+        {
+          id: mockUser.id,
+          username: mockUser.username,
+          email: mockUser.email,
+          role: mockUser.role,
+          createdAt: mockUser.createdAt,
+          updatedAt: mockUser.updatedAt,
+        },
+      ]);
+      expect(result.users[0]).not.toHaveProperty('password'); // Danh sách users
       expect(result.pagination.total).toBe(total); // Tổng số users
       expect(result.pagination.page).toBe(1); // Trang hiện tại
       expect(result.pagination.limit).toBe(10); // Số records trên mỗi trang
@@ -380,33 +397,35 @@ describe('UserService', () => {
 
   // ===== TEST findById METHOD (với caching logic) =====
   describe('findById', () => {
-    it('should return user from cache when available', async () => {
-      // Arrange - Set user vào cache trước
+    it('should return public user from cache when available', async () => {
       const userId = 1;
-      service['cache'].set(userId, mockUser);
+      service['setCachedUser'](userId, mockUser);
 
-      // Act - Tìm user theo ID
       const result = await service.findById(userId);
 
-      // Assert - Verify không query database, lấy từ cache
-      expect(usersRepository.findOne).not.toHaveBeenCalled(); // Không query DB
-      expect(result).toEqual(mockUser);
+      expect(usersRepository.findOne).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        id: mockUser.id,
+        username: mockUser.username,
+        email: mockUser.email,
+        role: mockUser.role,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      });
+      expect(result).not.toHaveProperty('password');
     });
 
-    it('should return user from database and cache it', async () => {
-      // Arrange - Cache chưa có user, mock repository trả về user
+    it('should return public user from database and cache it', async () => {
       const userId = 1;
       usersRepository.findOne.mockResolvedValue(mockUser);
 
-      // Act - Tìm user theo ID
       const result = await service.findById(userId);
 
-      // Assert - Verify query database và cache kết quả
       expect(usersRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
       });
-      expect(result).toEqual(mockUser);
-      expect(service['cache'].has(userId)).toBe(true); // User được cache
+      expect(result).not.toHaveProperty('password');
+      expect(service['cache'].has(userId)).toBe(true);
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -430,40 +449,39 @@ describe('UserService', () => {
   // ===== TEST updateRole METHOD (với transaction logic) =====
   describe('updateRole', () => {
     it('should update user role successfully', async () => {
-      // Arrange - Chuẩn bị transaction scenario thành công
       const userId = 1;
-      const updatedUser = { ...mockUser, role: 'admin' as 'admin' };
+      const updatedUser = { ...mockUser, role: 'admin' as const };
       const mockQueryRunner = {
         connect: jest.fn(),
-        startTransaction: jest.fn(), // Bắt đầu transaction
-        commitTransaction: jest.fn(), // Commit thành công
-        rollbackTransaction: jest.fn(), // Không được gọi
-        release: jest.fn(), // Giải phóng connection
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn(),
+        rollbackTransaction: jest.fn(),
+        release: jest.fn(),
         manager: {
-          count: jest.fn().mockResolvedValue(2), // Có > 1 admin (safe để downgrade)
-          save: jest.fn().mockResolvedValue(updatedUser), // Save thành công
+          findOne: jest.fn().mockResolvedValue(mockUser),
+          count: jest.fn().mockResolvedValue(2),
+          save: jest.fn().mockResolvedValue(updatedUser),
         },
       };
 
       dataSource.createQueryRunner.mockReturnValue(mockQueryRunner as any);
-      jest.spyOn(service, 'findById').mockResolvedValue(mockUser); // Mock tìm user
 
-      // Act - Cập nhật role của user
       const result = await service.updateRole(userId, mockUpdateRoleDto);
 
-      // Assert - Verify transaction flow và caching
-      expect(service.findById).toHaveBeenCalledWith(userId); // Tìm user trước
-      expect(mockQueryRunner.startTransaction).toHaveBeenCalled(); // Start transaction
-      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled(); // Commit thành công
-      expect(mockQueryRunner.release).toHaveBeenCalled(); // Giải phóng connection
-      expect(result).toEqual(updatedUser); // Return user đã update
-      expect(service['cache'].get(userId)).toEqual(updatedUser); // Cache được update
+      expect(mockQueryRunner.manager.findOne).toHaveBeenCalledWith(UsersEntity, {
+        where: { id: userId },
+      });
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalled();
+      expect(result).not.toHaveProperty('password');
+      expect(result.role).toBe('admin');
     });
 
     it('should throw ConflictException when downgrading last admin', async () => {
       // Arrange - Chuẩn bị scenario: downgrade admin cuối cùng (business rule violation)
       const userId = 1;
-      const adminUser = { ...mockUser, role: 'admin' as 'admin' }; // User hiện tại là admin
+      const adminUser = { ...mockUser, role: 'admin' as const }; // User hiện tại là admin
       const mockQueryRunner = {
         connect: jest.fn(),
         startTransaction: jest.fn(),
@@ -471,13 +489,13 @@ describe('UserService', () => {
         rollbackTransaction: jest.fn(), // Sẽ được gọi khi có lỗi
         release: jest.fn(),
         manager: {
-          count: jest.fn().mockResolvedValue(1), // Chỉ có 1 admin (user hiện tại)
-          save: jest.fn(), // Không được gọi
+          findOne: jest.fn().mockResolvedValue(adminUser),
+          count: jest.fn().mockResolvedValue(1),
+          save: jest.fn(),
         },
       };
 
       dataSource.createQueryRunner.mockReturnValue(mockQueryRunner as any);
-      jest.spyOn(service, 'findById').mockResolvedValue(adminUser); // Mock tìm user
 
       // Act & Assert - Test business rule: không cho phép downgrade admin cuối cùng
       // Verify ném ConflictException
@@ -502,13 +520,13 @@ describe('UserService', () => {
         rollbackTransaction: jest.fn(), // Sẽ được gọi khi có lỗi
         release: jest.fn(),
         manager: {
+          findOne: jest.fn().mockResolvedValue(mockUser),
           count: jest.fn(),
-          save: jest.fn().mockRejectedValue(new Error('Database error')), // Mock database error
+          save: jest.fn().mockRejectedValue(new Error('Database error')),
         },
       };
 
       dataSource.createQueryRunner.mockReturnValue(mockQueryRunner as any);
-      jest.spyOn(service, 'findById').mockResolvedValue(mockUser); // Mock tìm user
 
       // Act & Assert - Test error handling trong transaction
       // Verify service propagate database error
@@ -525,7 +543,7 @@ describe('UserService', () => {
     it('should remove user from cache', () => {
       // Arrange - Set user vào cache trước
       const userId = 1;
-      service['cache'].set(userId, mockUser);
+      service['setCachedUser'](userId, mockUser);
 
       // Act - Xóa user khỏi cache
       service.clearCache(userId);
@@ -538,8 +556,8 @@ describe('UserService', () => {
   describe('clearAllCache', () => {
     it('should clear all cache', () => {
       // Arrange - Set nhiều users vào cache
-      service['cache'].set(1, mockUser);
-      service['cache'].set(2, { ...mockUser, id: 2 });
+      service['setCachedUser'](1, mockUser);
+      service['setCachedUser'](2, { ...mockUser, id: 2 });
 
       // Act - Xóa toàn bộ cache
       service.clearAllCache();

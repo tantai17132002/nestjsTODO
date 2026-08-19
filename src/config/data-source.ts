@@ -5,13 +5,8 @@ import { config } from 'dotenv';
 config();
 
 /**
- * DataSource dùng cho TypeORM CLI
- * Chỉ dùng khi generate/run/revert migration
- *
- * Lưu ý:
- * - CLI chỉ làm việc với file JS đã build ra trong dist
- * - Không bao giờ dùng synchronize = true trong CLI
- * - Luôn dùng migrations để quản lý schema
+ * DataSource dùng cho TypeORM CLI khi generate/run/revert migration.
+ * Script npm phải đăng ký tsconfig-paths để resolve alias `@/`.
  */
 export default new DataSource({
   type: 'postgres',
@@ -23,9 +18,9 @@ export default new DataSource({
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
 
-  // CLI sẽ làm việc với file JS đã build ra trong dist
-  entities: ['dist/**/*.entity.js'],
-  migrations: ['dist/migrations/*.js'],
+  // CLI chạy qua ts-node nên chỉ load source; tránh trùng migration với dist.
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
 
   // KHÔNG BAO GIỜ dùng synchronize = true trong CLI
   // Luôn dùng migrations để quản lý schema

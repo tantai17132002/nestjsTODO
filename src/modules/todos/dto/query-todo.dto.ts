@@ -1,26 +1,15 @@
 import { IsBooleanString, IsOptional, IsString, IsIn, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { BaseQueryDto } from '@/common/dto/pagination.dto';
+import { IsValidDateRange } from '@/common/validators/date-range.validator';
 
 /**
- * DTO cho việc truy vấn danh sách todos với pagination, filtering và sorting
- *
- * Extends từ BaseQueryDto để có pagination cơ bản
- * Thêm các tính năng filtering và sorting đặc thù cho todos
- *
- * @example
- * GET /todos?page=1&limit=10&isDone=true&search=typescript&sortBy=createdAt&sortOrder=desc
+ * Query danh sách todo: phân trang, lọc, tìm kiếm và sắp xếp theo hợp đồng API.
  */
 export class QueryTodoDto extends BaseQueryDto {
-  // ===== FILTERING =====
-  /**
-   * Filter theo trạng thái hoàn thành của todo
-   * @IsBooleanString() - Validate phải là string "true" hoặc "false"
-   * Ví dụ: ?isDone=true hoặc ?isDone=false
-   * Lưu ý: Query params luôn là string, nên cần dùng IsBooleanString thay vì IsBoolean
-   */
   @ApiProperty({
-    description: 'Filter todos by completion status',
+    description: 'Lọc theo trạng thái hoàn thành',
     example: 'true',
     required: false,
     enum: ['true', 'false'],
@@ -29,24 +18,18 @@ export class QueryTodoDto extends BaseQueryDto {
   @IsOptional()
   isDone?: string;
 
-  /**
-   * Tìm kiếm theo title hoặc description
-   * Hỗ trợ tìm kiếm text không phân biệt hoa thường
-   */
   @ApiProperty({
-    description: 'Search todos by title or description (case-insensitive)',
+    description: 'Tìm một phần trong title hoặc description, không phân biệt hoa thường',
     example: 'typescript',
     required: false,
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsOptional()
   search?: string;
 
-  /**
-   * Filter theo ngày tạo từ (ISO date string)
-   */
   @ApiProperty({
-    description: 'Filter todos created from this date (ISO format)',
+    description: 'Lọc todo tạo từ thời điểm này (ISO 8601)',
     example: '2024-01-01T00:00:00.000Z',
     required: false,
   })
@@ -54,24 +37,18 @@ export class QueryTodoDto extends BaseQueryDto {
   @IsOptional()
   dateFrom?: string;
 
-  /**
-   * Filter theo ngày tạo đến (ISO date string)
-   */
   @ApiProperty({
-    description: 'Filter todos created until this date (ISO format)',
+    description: 'Lọc todo tạo đến thời điểm này (ISO 8601); phải >= dateFrom nếu cả hai có mặt',
     example: '2024-12-31T23:59:59.999Z',
     required: false,
   })
   @IsDateString()
   @IsOptional()
+  @IsValidDateRange()
   dateTo?: string;
 
-  // ===== SORTING =====
-  /**
-   * Sắp xếp theo trường nào
-   */
   @ApiProperty({
-    description: 'Sort by field',
+    description: 'Cột sắp xếp được phép',
     example: 'createdAt',
     required: false,
     enum: ['id', 'title', 'isDone', 'createdAt', 'updatedAt'],
@@ -80,11 +57,8 @@ export class QueryTodoDto extends BaseQueryDto {
   @IsOptional()
   sortBy?: string = 'createdAt';
 
-  /**
-   * Thứ tự sắp xếp (asc/desc)
-   */
   @ApiProperty({
-    description: 'Sort order',
+    description: 'Thứ tự sắp xếp',
     example: 'desc',
     required: false,
     enum: ['asc', 'desc'],

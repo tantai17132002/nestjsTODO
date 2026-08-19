@@ -156,7 +156,7 @@ export class CreateUsersTable1234567890123 implements MigrationInterface {
 Once the application is running, you can access the Swagger API documentation at:
 
 ```
-http://localhost:3000/api
+http://localhost:3001/api
 ```
 
 The documentation includes:

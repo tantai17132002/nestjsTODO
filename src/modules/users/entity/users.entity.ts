@@ -44,13 +44,13 @@ export class UsersEntity extends BaseEntity {
   password: string;
 
   /**
-   * Vai trò của users trong hệ thống
-   * type: 'enum' = kiểu dữ liệu enum
-   * enum: ['user', 'admin'] = chỉ cho phép 2 giá trị này
-   * default: 'user' = mặc định là user thường
-   * 'user' | 'admin' = chỉ cho phép 2 giá trị này
+   * Vai trò `user` hoặc `admin`. PostgreSQL dùng enum; SQLite test dùng varchar.
    */
-  @Column({ type: 'enum', enum: ['user', 'admin'], default: 'user' })
+  @Column({
+    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
+    enum: ['user', 'admin'],
+    default: 'user',
+  })
   role: 'user' | 'admin';
 
   /**

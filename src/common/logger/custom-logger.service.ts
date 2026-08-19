@@ -1,4 +1,4 @@
-import { LoggerService, Injectable, LogLevel } from '@nestjs/common';
+import { LoggerService, Injectable } from '@nestjs/common';
 
 /**
  * CustomLogger - Service tùy chỉnh cho logging
@@ -164,9 +164,10 @@ export class CustomLogger implements LoggerService {
    * // Output: [DEBUG] Response time: 45ms (màu magenta)
    */
   debug?(message: string) {
-    // \x1b[35m = ANSI color code cho magenta
-    // Optional method (?) - có thể không implement trong production
-    process.stdout.write(`\x1b[35m[DEBUG]\x1b[0m ${message}\n`); // magenta
+    if (process.env.NODE_ENV === 'production') {
+      return;
+    }
+    process.stdout.write(`\x1b[35m[DEBUG]\x1b[0m ${message}\n`);
   }
 }
 

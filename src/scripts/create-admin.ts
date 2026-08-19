@@ -3,54 +3,54 @@ import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { hash } from 'bcryptjs';
-
-// Import entity từ app
 import { UsersEntity } from '@/modules/users/entity/users.entity';
 import { TodoEntity } from '@/modules/todos/entities/todo.entity';
+import { normalizeEmail } from '@/common/utils/normalize';
 
 dotenv.config();
 
 /**
- * Tạo cấu hình DataSource cho script độc lập
- * Tái sử dụng logic từ typeorm.config.ts nhưng phù hợp với script
+ * DataSource cho script seed; không synchronize schema — phải chạy migration trước.
  */
 function createDataSourceConfig(): DataSourceOptions {
+  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS', 'DB_NAME'] as const;
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
   return {
     type: 'postgres',
-    host: process.env.DB_HOST || 'postgres',
-    port: +(process.env.DB_PORT || '5432'),
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASS || 'password',
-    database: process.env.DB_NAME || 'project_cb',
-    // Load các entity cần thiết cho script này
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
     entities: [UsersEntity, TodoEntity],
-    synchronize: true,
-    // Thêm logging để debug
+    synchronize: false,
     logging: process.env.NODE_ENV === 'development',
   };
 }
 
 /**
- * Script tạo admin user cho hệ thống
- * Sử dụng environment variables để cấu hình thông tin admin
+ * Tạo admin đầu tiên, idempotent theo email đã chuẩn hóa. Không in mật khẩu.
  */
-async function main() {
-  // Sử dụng helper function để tạo cấu hình
-  const dataSourceConfig = createDataSourceConfig();
-  const dataSource = new DataSource(dataSourceConfig);
+async function main(): Promise<void> {
+  const emailRaw = process.env.ADMIN_EMAIL;
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!emailRaw || !username || !password) {
+    throw new Error('ADMIN_EMAIL, ADMIN_USERNAME and ADMIN_PASSWORD are required');
+  }
+
+  const email = normalizeEmail(emailRaw);
+  const dataSource = new DataSource(createDataSourceConfig());
 
   try {
-    // Khởi tạo kết nối database
     await dataSource.initialize();
-
     const repository = dataSource.getRepository(UsersEntity);
-    
-    // Lấy thông tin admin từ environment variables với fallback
-    const email = process.env.ADMIN_EMAIL || 'admin@example.com';
-    const username = process.env.ADMIN_USERNAME || 'admin';
-    const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
 
-    // Kiểm tra admin đã tồn tại chưa
     const existingAdmin = await repository.findOne({ where: { email } });
     if (existingAdmin) {
       console.log('Admin user already exists:', existingAdmin.email);
@@ -59,32 +59,22 @@ async function main() {
 
     console.log('Creating admin user with email:', email);
 
-    // Băm mật khẩu với salt rounds = 10
-    const hashedPassword = await hash(password, 10);
-
-    // Tạo admin user mới
     const adminUser = repository.create({
       username,
       email,
-      password: hashedPassword,
+      password: await hash(password, 10),
       role: 'admin',
     });
-
     await repository.save(adminUser);
     console.log('Admin user created successfully:', adminUser.email);
-
-  } catch (error) {
-    console.error('Error creating admin user:', error);
-    throw error;
   } finally {
-    // Đảm bảo đóng kết nối database
     if (dataSource.isInitialized) {
       await dataSource.destroy();
     }
   }
 }
 
-// Xử lý lỗi chính và thoát với code phù hợp
-main().catch((error) => {
+main().catch((error: unknown) => {
+  console.error('Error creating admin user:', error instanceof Error ? error.message : error);
   process.exit(1);
 });

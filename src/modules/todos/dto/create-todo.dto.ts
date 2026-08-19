@@ -1,43 +1,23 @@
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 /**
- * CreateTodoDto - Data Transfer Object cho việc tạo todo mới
- *
- * DTO này định nghĩa cấu trúc dữ liệu và validation rules
- * khi client gửi request tạo todo mới
- *
- * @example
- * // Request body khi tạo todo
- * {
- *   "title": "Học TypeScript",
- *   "description": "Ôn lại các khái niệm cơ bản",
- *   "isDone": false
- * }
+ * DTO tạo todo mới. ownerId luôn lấy từ JWT, không nhận từ client.
  */
 export class CreateTodoDto {
-  /**
-   * Tiêu đề của todo
-   * @IsString() = phải là chuỗi
-   * @IsNotEmpty() = không được để trống
-   * Validation: Bắt buộc phải có giá trị và phải là string
-   */
   @ApiProperty({
-    description: 'title todo',
+    description: 'Tiêu đề todo, bắt buộc và không được chỉ gồm khoảng trắng',
     example: 'Learn TypeScript',
     required: true,
   })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  /**
-   * Mô tả chi tiết của todo (tùy chọn)
-   * @IsOptional() = có thể để trống
-   * Validation: Nếu có thì phải là string
-   */
   @ApiProperty({
-    description: 'Detailed description of the todo (optional)',
+    description: 'Mô tả chi tiết (tùy chọn)',
     example: 'Review the basics of TypeScript',
     required: false,
   })
@@ -45,14 +25,8 @@ export class CreateTodoDto {
   @IsOptional()
   description?: string;
 
-  /**
-   * Trạng thái hoàn thành của todo (tùy chọn)
-   * @IsBoolean() = phải là boolean
-   * Validation: Nếu có thì phải là true hoặc false
-   * Mặc định sẽ là false khi tạo todo mới
-   */
   @ApiProperty({
-    description: 'Status of the todo',
+    description: 'Trạng thái hoàn thành, mặc định false nếu không gửi',
     example: false,
     required: false,
     default: false,

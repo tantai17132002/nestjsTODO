@@ -25,10 +25,10 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { TodoResponseDto, TodoListResponseDto } from '@/modules/todos/dto/todo-response.dto';
+import { TodoResponseDto } from '@/modules/todos/dto/todo-response.dto';
 import { TodoPaginationResponseDto } from '@/modules/todos/dto/todo-pagination-response.dto';
+import { DeletedResponseDto } from '@/common/dto/deleted-response.dto';
 import {
-  ErrorResponseDto,
   ValidationErrorResponseDto,
   UnauthorizedErrorResponseDto,
   ForbiddenErrorResponseDto,
@@ -60,9 +60,9 @@ import type { JwtUser } from '@/common/types';
  * Tuân thủ nguyên tắc: Controller chỉ routing + I/O, Service xử lý business logic
  */
 @ApiTags('Todos')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard) // Bảo vệ tất cả endpoints bằng JWT authentication
-@Controller('todos') // Base route: /todos
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard)
+@Controller('todos')
 export class TodosController {
   constructor(private readonly todosService: TodosService) {}
 
@@ -337,7 +337,7 @@ export class TodosController {
   @ApiResponse({
     status: 200,
     description: 'Todo deleted successfully',
-    type: TodoResponseDto,
+    type: DeletedResponseDto,
   })
   @ApiResponse({
     status: 401,

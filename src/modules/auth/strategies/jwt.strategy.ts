@@ -1,49 +1,42 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import type { JwtPayload, JwtUser } from '@/common/types';
+import { UserService } from '@/modules/users/users.service';
 
 /**
- * JwtStrategy - Chiến lược xác thực bằng JWT Token
- *
- * Strategy này chịu trách nhiệm:
- * - Trích xuất JWT token từ request header
- * - Verify và decode JWT token
- * - Trả về thông tin user từ payload của token
- * - Được sử dụng bởi Passport để bảo vệ các route cần xác thực
+ * Xác minh JWT rồi đọc lại user từ database để role mới có hiệu lực ngay.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly userService: UserService,
+  ) {
     super({
-      // Cách trích xuất JWT token từ request
-      // Từ header Authorization: Bearer <token>
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-
-      // Secret key để verify JWT token (lấy từ biến môi trường)
-      secretOrKey: config.get('JWT_SECRET') as string,
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
   /**
-   * Validate và trả về thông tin user từ JWT payload
+   * Ánh xạ `sub` thành `id` và lấy role hiện tại từ DB, không tin role cũ trong token.
    *
-   * @param payload - Payload đã được decode từ JWT token
-   * @returns Object chứa thông tin user (id, username, role)
-   *
-   * @example
-   * // Khi gọi @UseGuards(JwtAuthGuard) trên controller
-   * // Method này sẽ được tự động gọi để validate token
-   * // Và trả về user object cho request
+   * @param payload Claims đã verify.
+   * @returns JwtUser gắn vào request.
+   * @throws UnauthorizedException nếu user không còn tồn tại.
    */
   async validate(payload: JwtPayload): Promise<JwtUser> {
-    // Trả về object chứa thông tin user từ JWT payload
-    // Object này sẽ được inject vào request.user
-    return {
-      id: payload.sub, // ID user (subject từ JWT)
-      username: payload.username, // Tên đăng nhập
-      role: payload.role, // Vai trò của user
-    };
+    try {
+      const user = await this.userService.findEntityById(payload.sub);
+      return {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid credentials');
+    }
   }
 }

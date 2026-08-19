@@ -4,6 +4,7 @@ import { validate } from 'class-validator';
 import { CreateUsersDto } from '@/modules/users/dto/create-users.dto';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { CreateTodoDto } from '@/modules/todos/dto/create-todo.dto';
+import { UpdateTodoDto } from '@/modules/todos/dto/update-todo.dto';
 import { QueryTodoDto } from '@/modules/todos/dto/query-todo.dto';
 
 /**
@@ -367,6 +368,20 @@ describe('ValidationPipe + DTOs', () => {
     });
   });
 
+  describe('UpdateTodoDto', () => {
+    it('should pass validation with a non-empty title', async () => {
+      const dto = plainToClass(UpdateTodoDto, { title: 'Updated title' });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should fail validation when title is empty string', async () => {
+      const dto = plainToClass(UpdateTodoDto, { title: '   ' });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'title')).toBe(true);
+    });
+  });
+
   // ===== TEST QueryTodoDto =====
   describe('QueryTodoDto', () => {
     it('should pass validation with no query parameters', async () => {
@@ -458,6 +473,18 @@ describe('ValidationPipe + DTOs', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('dateFrom');
       expect(errors[0].constraints).toHaveProperty('isDateString');
+    });
+
+    it('should fail validation when dateFrom is after dateTo', async () => {
+      const invalidData = {
+        dateFrom: '2024-12-31T00:00:00.000Z',
+        dateTo: '2024-01-01T00:00:00.000Z',
+      };
+
+      const dto = plainToClass(QueryTodoDto, invalidData);
+      const errors = await validate(dto);
+
+      expect(errors.some((e) => e.property === 'dateTo')).toBe(true);
     });
 
     it('should fail validation when dateTo is not valid date string', async () => {

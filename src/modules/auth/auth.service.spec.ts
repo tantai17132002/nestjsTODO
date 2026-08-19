@@ -135,7 +135,7 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       await expect(service.validateUser(usernameOrEmail, password)).rejects.toThrow(
-        'User not found',
+        'Invalid credentials',
       );
 
       expect(userService.findByUsernameOrEmail).toHaveBeenCalledWith(usernameOrEmail);
@@ -160,7 +160,7 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       await expect(service.validateUser(usernameOrEmail, password)).rejects.toThrow(
-        'Wrong password',
+        'Invalid credentials',
       );
 
       expect(userService.findByUsernameOrEmail).toHaveBeenCalledWith(usernameOrEmail);
@@ -211,7 +211,7 @@ describe('AuthService', () => {
       jwtService.sign.mockReturnValue(mockToken);
 
       // Act - Tạo JWT token
-      const result = await service.login(mockUser);
+      const result = service.login(mockUser);
 
       // Assert - Kiểm tra JWT được tạo với payload đúng
       expect(jwtService.sign).toHaveBeenCalledWith(expectedPayload);
@@ -233,7 +233,7 @@ describe('AuthService', () => {
       jwtService.sign.mockReturnValue(mockToken);
 
       // Act - Tạo JWT cho admin
-      const result = await service.login(adminUser);
+      const result = service.login(adminUser);
 
       // Assert - Kiểm tra payload chứa role admin
       expect(jwtService.sign).toHaveBeenCalledWith(expectedPayload);
@@ -259,7 +259,7 @@ describe('AuthService', () => {
       jwtService.sign.mockReturnValue(mockToken);
 
       // Act - Tạo JWT với user tùy chỉnh
-      await service.login(customUser);
+      service.login(customUser);
 
       // Assert - Kiểm tra payload structure đúng
       expect(jwtService.sign).toHaveBeenCalledWith({
@@ -356,7 +356,7 @@ describe('AuthService', () => {
 
       // Act & Assert - Kiểm tra exception khi password sai
       await expect(service.processLogin(mockLoginDto)).rejects.toThrow(UnauthorizedException);
-      await expect(service.processLogin(mockLoginDto)).rejects.toThrow('Wrong password');
+      await expect(service.processLogin(mockLoginDto)).rejects.toThrow('Invalid credentials');
 
       expect(userService.findByUsernameOrEmail).toHaveBeenCalledWith(mockLoginDto.usernameOrEmail);
       expect(bcrypt.compare).toHaveBeenCalledWith(mockLoginDto.password, hashedPassword);

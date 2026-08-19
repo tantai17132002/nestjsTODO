@@ -49,8 +49,10 @@ export default tseslint.config(
       
       // Cấu hình parser cho TypeScript
       parserOptions: {
-        projectService: true,           // Bật TypeScript project service
-        tsconfigRootDir: import.meta.dirname,  // Thư mục chứa tsconfig.json
+        projectService: {
+          allowDefaultProject: ['test/*.ts'],
+        },
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },

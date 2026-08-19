@@ -1,64 +1,37 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 /**
- * UpdateTodoDto - Data Transfer Object cho việc cập nhật todo
- *
- * DTO này định nghĩa cấu trúc dữ liệu và validation rules
- * khi client gửi request cập nhật todo
- * Tất cả các trường đều là tùy chọn (optional) vì chỉ cập nhật những gì cần thiết
- *
- * @example
- * // Request body khi cập nhật todo (có thể chỉ gửi một số trường)
- * {
- *   "title": "Học TypeScript nâng cao",
- *   "isDone": true
- * }
- *
- * // Hoặc chỉ cập nhật trạng thái
- * {
- *   "isDone": true
- * }
+ * DTO cập nhật todo. Chỉ nhận title, description, isDone; body rỗng bị từ chối ở service.
  */
 export class UpdateTodoDto {
-  /**
-   * Tiêu đề mới của todo (tùy chọn)
-   * @IsString() = phải là chuỗi nếu có giá trị
-   * @IsOptional() = có thể để trống, không bắt buộc cập nhật
-   * Validation: Nếu có thì phải là string
-   */
   @ApiProperty({
-    description: 'Todo new topic (optional)',
+    description: 'Tiêu đề mới; nếu gửi phải khác chuỗi rỗng',
     example: 'Learn Advanced TypeScript',
     required: false,
   })
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   title?: string;
 
-  /**
-   * Mô tả chi tiết mới của todo (tùy chọn)
-   */
   @ApiProperty({
-    description: 'Detailed description of the todo (optional)',
+    description: 'Mô tả mới (tùy chọn)',
     example: 'Review the basics of TypeScript',
     required: false,
   })
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsOptional()
   description?: string;
 
-  /**
-   * Trạng thái hoàn thành mới của todo (tùy chọn)
-   * @IsBoolean() = phải là boolean nếu có giá trị
-   * Validation: Nếu có thì phải là true hoặc false
-   */
   @ApiProperty({
-    description: 'New completion status of todo (optional)',
+    description: 'Trạng thái hoàn thành mới (tùy chọn)',
     example: true,
     required: false,
   })
+  @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
-  @IsOptional()
   isDone?: boolean;
 }

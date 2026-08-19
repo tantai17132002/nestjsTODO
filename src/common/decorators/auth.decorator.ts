@@ -24,7 +24,7 @@ export function Auth(...roles: UserRole[]) {
   // ApiBearerAuth() - Thêm Bearer token vào Swagger docs
   // UseGuards(JwtAuthGuard, RolesGuard) - Áp dụng 2 guards theo thứ tự
   const decorators: (ClassDecorator | MethodDecorator | PropertyDecorator)[] = [
-    ApiBearerAuth(),
+    ApiBearerAuth('JWT-auth'),
     UseGuards(JwtAuthGuard, RolesGuard),
   ];
 
